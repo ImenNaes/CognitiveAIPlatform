@@ -5,6 +5,7 @@ using Microsoft.Extensions.Options;
 using Azure;
 using Azure.AI.OpenAI;
 using OpenAI.Chat;
+using Microsoft.Extensions.Logging;
 
 namespace Infrastructure.Services
 {
@@ -12,9 +13,12 @@ namespace Infrastructure.Services
     {
         private readonly AIModelProviderSettings _options;
         private readonly AzureOpenAIClient _client;
-        public ChatCompletionService(IOptions<AIModelProviderSettings> options)
+        private readonly ILogger<ChatCompletionService> _logger;
+        public ChatCompletionService(IOptions<AIModelProviderSettings> options, ILogger<ChatCompletionService> logger)
         {
             _options = options.Value;
+            _logger = logger;
+
             _client = new AzureOpenAIClient(
                    new Uri(_options.AzureOpenAIEndpoint!),
                    new AzureKeyCredential(_options.AzureOpenAIApiKey!)
@@ -26,11 +30,7 @@ namespace Infrastructure.Services
             try
             {
                 var chatClient = _client.GetChatClient(_options.DeploymentModelName);
-
-                var messages = new List<ChatMessage>
-                {
-                    new UserChatMessage(request.Prompt)
-                };
+                var messages = new List<ChatMessage> { new UserChatMessage(request.Prompt) };
 
                 var response = await chatClient.CompleteChatAsync(
                     messages,
@@ -43,11 +43,13 @@ namespace Infrastructure.Services
                 );
 
                 var chatResponse = response.Value.Content.Last().Text;
+                _logger.LogInformation("Réponse générée : {Response}", chatResponse);
                 return chatResponse;
             }
             catch (Exception ex)
             {
-                return ex.Message;
+                _logger.LogError(ex, "Erreur dans GenerateChatAsync");
+                throw;
             }
 
         }

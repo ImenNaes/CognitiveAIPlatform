@@ -17,9 +17,13 @@ namespace CognitiveAIPlatform.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> post([FromBody] ChatCompletionRequest request)
+        public async Task<IActionResult> PostAsync([FromBody] ChatCompletionRequest request)
         {
-            _logger.LogInformation("Requête reçue avec prompt : {Prompt}", request);
+            if (string.IsNullOrWhiteSpace(request.Prompt))
+                return BadRequest("Le champ 'Prompt' est obligatoire.");
+
+            _logger.LogInformation("Requête reçue avec prompt : {Prompt}", request.Prompt);
+
             try
             {
                 var domainRequest = new ChatCompletionRequest
